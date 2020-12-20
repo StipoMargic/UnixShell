@@ -17,6 +17,7 @@
 #include "tinydir.h"
 #include <stdio.h>
 #include <string.h>
+#include <dirent.h>
 
 /*
   Function Declarations for builtin shell commands:
@@ -27,6 +28,8 @@ int lsh_exit(char **args);
 int lsh_pwd();
 int lsh_touch(char **args);
 int lsh_ls(char **args);
+int lsh_mkdir(char **args);
+int lsh_mv(char **args);
 /*
   List of builtin commands, followed by their corresponding functions.
  */
@@ -36,16 +39,18 @@ char *builtin_str[] = {
     "exit",
     "pwd",
     "touch",
-    "ls"};
+    "ls",
+    "mkdir"
+    "mv"};
 
-int (*builtin_func[])(char **) = {&lsh_cd, &lsh_help, &lsh_exit, &lsh_pwd, &lsh_touch, &lsh_ls};
+int (*builtin_func[])(char **) = {&lsh_cd, &lsh_help, &lsh_exit, &lsh_pwd, &lsh_touch, &lsh_ls, &lsh_mkdir, &lsh_mv};
 
 int lsh_num_builtins()
 {
   return sizeof(builtin_str) / sizeof(char *);
 }
-
 /*
+
   Builtin function implementations.
 */
 
@@ -70,7 +75,17 @@ int lsh_cd(char **args)
   return 1;
 }
 
-int lsh_mkdir() int lsh_ls(char **args)
+int lsh_mkdir(char **args)
+{
+  if (args[1] == NULL)
+    fprintf(stderr, "lsh: expected argument to \"mkdir\"\n");
+  else
+    mkdir(args[1], 0777);
+
+  return 1;
+}
+
+int lsh_ls(char **args)
 {
   tinydir_dir dir;
   if (tinydir_open(&dir, ".") == -1)
@@ -104,7 +119,53 @@ int lsh_mkdir() int lsh_ls(char **args)
 
 bail:
   tinydir_close(&dir);
-  return 0;
+  return 1;
+}
+int lsh_mv(char **args)
+{
+  char *file = args[1];
+  char *location = args[2];
+  char newplace[50];
+
+  {
+    if (location[0] == '/') //check to see if input is a path
+    {
+      strcat(location, "/"); //if argument is a Full Path, prepare to mv to end of path.
+      strcat(location, file);
+      if (rename(file, location) == 0)
+        printf("Successful\n");
+      else
+        printf("Error:\nDirectory not found\n");
+    }
+    else
+    {
+      DIR *isD;
+      isD = opendir(location); // check if argument is a DIR in CWD
+
+      if (isD == NULL)
+      {
+        if (rename(file, location) != 0)
+          printf("Error: File not moved\n");
+        else
+          printf("Successful\n");
+      }
+      else
+      {
+        char *ptrL;
+        ptrL = getcwd(newplace, 50); // get current working directory path
+        strcat(newplace, "/");
+        strcat(newplace, location); // attach mv location to path ptrL
+        strcat(newplace, "/");
+        strcat(newplace, file); // keep original file name
+        if (rename(file, ptrL) != -1)
+          printf("Successful\n");
+        else
+          printf("Error:\nDirectory not found in CWD\n");
+        closedir(isD);
+      }
+    }
+  }
+  return 1;
 }
 
 int lsh_touch(char **args)
@@ -126,7 +187,7 @@ int lsh_touch(char **args)
 
   fclose(fPtr);
 
-  return 0;
+  return 1;
 }
 
 int lsh_pwd()
@@ -138,7 +199,7 @@ int lsh_pwd()
   else
     printf("current working directory is: %s\n", cwd);
 
-  return 0;
+  return 1;
 }
 /**
    @brief Builtin command: print help.
