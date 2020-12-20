@@ -67,6 +67,28 @@ int lsh_cd(char **args)
   return 1;
 }
 
+int lsh_touch(char **args)
+{
+  FILE *fPtr;
+
+  fPtr = fopen(args[1], "w");
+  if (args[1] == NULL)
+  {
+    fprintf(stderr, "lsh: expected argument to \"touch\"\n");
+  }
+  else
+  {
+    if (fPtr == NULL)
+    {
+      printf("Unable to create file.\n");
+    }
+  }
+
+  fclose(fPtr);
+
+  return 0;
+}
+
 int lsh_pwd()
 {
   char cwd[256];
