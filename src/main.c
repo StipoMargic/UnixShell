@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include "tinydir.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -25,6 +26,7 @@ int lsh_help(char **args);
 int lsh_exit(char **args);
 int lsh_pwd();
 int lsh_touch(char **args);
+int lsh_ls(char **args);
 /*
   List of builtin commands, followed by their corresponding functions.
  */
@@ -33,9 +35,10 @@ char *builtin_str[] = {
     "help",
     "exit",
     "pwd",
-    "touch"};
+    "touch",
+    "ls"};
 
-int (*builtin_func[])(char **) = {&lsh_cd, &lsh_help, &lsh_exit, &lsh_pwd, &lsh_touch};
+int (*builtin_func[])(char **) = {&lsh_cd, &lsh_help, &lsh_exit, &lsh_pwd, &lsh_touch, &lsh_ls};
 
 int lsh_num_builtins()
 {
@@ -65,6 +68,43 @@ int lsh_cd(char **args)
     }
   }
   return 1;
+}
+
+int lsh_mkdir() int lsh_ls(char **args)
+{
+  tinydir_dir dir;
+  if (tinydir_open(&dir, ".") == -1)
+  {
+    perror("Error opening file");
+    goto bail;
+  }
+
+  while (dir.has_next)
+  {
+    tinydir_file file;
+    if (tinydir_readfile(&dir, &file) == -1)
+    {
+      perror("Error getting file");
+      goto bail;
+    }
+
+    printf("%s", file.name);
+    if (file.is_dir)
+    {
+      printf("/");
+    }
+    printf("\n");
+
+    if (tinydir_next(&dir) == -1)
+    {
+      perror("Error getting next file");
+      goto bail;
+    }
+  }
+
+bail:
+  tinydir_close(&dir);
+  return 0;
 }
 
 int lsh_touch(char **args)
